@@ -5,6 +5,7 @@ import time
 import datetime
 import json
 import random
+import credentials as credentials
 from notifiers import get_notifier
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -39,8 +40,9 @@ timestamp_started = datetime.datetime.fromtimestamp(time_start).strftime('%d.%m.
 file_timestamp = datetime.datetime.fromtimestamp(time_start).strftime('%Y%m%d%H%M')
 
 
-#### SCRAPING ####
+#### function SCRAPING ####
 def scrape_site(urls):
+	total_offers = 0
 	time_start = time.time()
 	timestamp_started = datetime.datetime.fromtimestamp(time_start).strftime('%d.%m.%Y, %H:%M:%S')
 	# open Selenium, go to website and get results
@@ -74,10 +76,12 @@ def scrape_site(urls):
 		if not error:
 			print(f'{offers} Offers found on URL "{url}"')
 		if offers == 0:
-			inform_telegram(offers, url)
+			inform_telegram(offers, url, timestamp_started)
+		total_offers = total_offers + offers
 		print('==============================================================================')
 
 	print(f'-- Scraping done in {time.time()-time_start} seconds --')
+	inform_telegram(total_offers, 'All platforms', timestamp_started)
 	
 	# Cleaning up
 	try:
@@ -85,44 +89,25 @@ def scrape_site(urls):
 		print('-- Driver quit --')
 	except:
 		print('Error: Quitting driver was not possible.')
+#### #### #### #### #### ####
 
 
 #### function INFORM TELEGRAM CHANNEL ####
-def inform_telegram(offers, url):
-	print(f'Telegram msg-sent placeholder: {offers} offers found on {url}')
-	return None
-	'''
-	try:
-		vehicles_count = (len(vehicles_json['entries']))
-		faillist = []
-		for entry in vehicles_json['entries']:
-			for (key, val) in entry.items():
-				#print(type(val))
-				if type(val)==int and val != 200 and val != 'none':
-					#status & name & body & url
-					url_key = key[0:-6]+'checked'
-					failed = f'Error: {val}, at: {entry["model_name"]}, {entry["model_bodystyle"]}, URL: {entry[url_key]}\n'
-					faillist.append(failed)
+def inform_telegram(offers, url, timestamp_started):
+	#print(f'Telegram msg-sent placeholder: {offers} offers found on {url}')
+	#return None
+	#try:
+	# create message
+	message = f'--- {offers} Offers ---\nURL: {url}\nStarted: {timestamp_started}'
 
-		# check faillist
-		if faillist == []:
-			fails_count = len(faillist)
-			failstatus = 'Everything seems ok :)\n'
-		else:
-			fails_count = len(faillist)
-			failstatus = ''.join(faillist)
+	#send message
+	telegram = get_notifier('telegram')
+	telegram_status = telegram.notify(message=message, token=credentials.bot_token, chat_id=credentials.chat_id)
+	print(f'Successfully informed Telegram channel: {telegram_status}')
+	#except:
+	#	print(f'Error while informing Telegram channel: {telegram_status}')
+#### #### #### #### #### ####
 
-		# create message
-		message = f'--- Scan completed ---\nURL: {url}\nStarted: {vehicles_json["timestamp_started"]}\nVehicles scanned: {vehicles_count}\n--- {fails_count} errors ---\n{failstatus}----------'
-
-		#send message
-		telegram = get_notifier('telegram')
-		telegram_status = telegram.notify(message=message, token='TELEGRAM-TOKEN-GOES-HERE', chat_id='CHAT-ID-GOES-HERE')
-		print(f'Successfully informed Telegram channel: {telegram_status}')
-	except:
-		print('Error while informing Telegram channel.')
-	'''
-#### #### #### #### #### ####'''
 
 #### function WRITE JSON FILE ####
 def write_json(filename, list):
@@ -136,4 +121,5 @@ def write_json(filename, list):
 
 
 scrape_site(urls)
+
 
